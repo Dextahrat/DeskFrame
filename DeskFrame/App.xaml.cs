@@ -13,7 +13,6 @@ namespace DeskFrame
     /// </summary>
     public partial class App : Application
     {
-        private DispatcherTimer updateTimer;
         public RegistryHelper reg = new RegistryHelper("DeskFrame");
         protected override void OnStartup(StartupEventArgs e)
         {
@@ -37,35 +36,6 @@ namespace DeskFrame
 #endif
             PresentationTraceSources.DataBindingSource.Switch.Level = SourceLevels.Critical;
             base.OnStartup(e);
-            ToastNotificationManagerCompat.OnActivated += ToastActivatedHandler;
-            StartUpdateCheckTimer();
-        }
-        private void ToastActivatedHandler(ToastNotificationActivatedEventArgsCompat toastArgs)
-        {
-            var args = ToastArguments.Parse(toastArgs.Argument);
-            Current.Dispatcher.Invoke(async () =>
-            {
-                if (args.Contains("action") && args["action"] == "install_update")
-                {
-                   await Updater.InstallUpdate();
-                }
-
-            });
-        }
-        private void StartUpdateCheckTimer()
-        {
-            updateTimer = new DispatcherTimer
-            {
-                Interval = TimeSpan.FromHours(6)
-            };
-            updateTimer.Tick += async (_, _) =>
-            {
-                if (reg.KeyExistsRoot("AutoUpdate") && (bool)reg.ReadKeyValueRoot("AutoUpdate"))
-                {
-                    await Updater.CheckUpdateAsync("https://api.github.com/repos/PinchToDebug/DeskFrame/releases/latest",true);
-                }
-            };
-            updateTimer.Start();
         }
     }
 

@@ -18,7 +18,6 @@
             <ContextMenu MinWidth="65">
                 <MenuItem Name="versionHeader" Header="version" FontSize="10" IsEnabled="False" HorizontalAlignment="Center" Background="{x:Null}" FontFamily="Segoe Print"/>
 
-                <ui:MenuItem x:Name="Update_Button" Header="{x:Static prop:Lang.TrayContextMenu_CheckUpdateButton}" Click="Update_Button_Click" Icon="{ui:SymbolIcon Symbol=ArrowSync20}"/>
                 <ui:MenuItem x:Name="visitGithub_Buton" Header="{x:Static prop:Lang.TrayContextMenu_VisitGithub}" Click="visitGithub_Buton_Click" Icon="{ui:SymbolIcon Symbol=Link20}" />
                 <Separator Margin="0,3,0,3"/>
 

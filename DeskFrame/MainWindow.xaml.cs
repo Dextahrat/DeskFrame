@@ -13,7 +13,6 @@ namespace DeskFrame
 {
     public partial class MainWindow : Window
     {
-        private string url = "https://api.github.com/repos/PinchToDebug/DeskFrame/releases/latest";
         bool startOnLogin;
         bool reseted = false;
         private uint _taskbarRestartMessage;
@@ -59,15 +58,6 @@ namespace DeskFrame
             AutorunToggle.IsChecked = startOnLogin;
             // if (_controller.reg.KeyExistsRoot("blurBackground")) BlurToggle.IsChecked = (bool)_controller.reg.ReadKeyValueRoot("blurBackground");
             if (_controller.reg.KeyExistsRoot("DoubleClickToHide")) DoubleClickToHide = (bool)_controller.reg.ReadKeyValueRoot("DoubleClickToHide");
-            if (_controller.reg.KeyExistsRoot("AutoUpdate") && (bool)_controller.reg.ReadKeyValueRoot("AutoUpdate"))
-            {
-                Update();
-                Debug.WriteLine("Auto update checking for update");
-            }
-            else if (!_controller.reg.KeyExistsRoot("AutoUpdate"))
-            {
-                _controller.reg.WriteToRegistryRoot("AutoUpdate", "False");
-            }
         }
         private void HandleGlobalDoubleClick(object? sender, MouseEventArgs e)
         {
@@ -96,11 +86,6 @@ namespace DeskFrame
                 return true;
             }
             return false;
-        }
-
-        private async void Update()
-        {
-            await Updater.CheckUpdateAsync(url, false);
         }
 
         private void addDesktopFrame_Click(object sender, RoutedEventArgs e)
@@ -163,16 +148,6 @@ namespace DeskFrame
             this.Hide();
         }
 
-        private async void Update_Button_Click(object sender, RoutedEventArgs e)
-        {
-            await Updater.CheckUpdateAsync(url, true);
-
-        }
-        //private void BlurToggle_CheckChanged(object sender, System.Windows.RoutedEventArgs e)
-        //{
-        //    _controller.reg.WriteToRegistryRoot("blurBackground", BlurToggle.IsChecked!);
-        //    _controller.ChangeBlur((bool)BlurToggle.IsChecked!);
-        //}
         private void AutorunToggle_CheckChanged(object sender, RoutedEventArgs e)
         {
             if ((bool)AutorunToggle.IsChecked!)

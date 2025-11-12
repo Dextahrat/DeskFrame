@@ -31,10 +31,10 @@
                     <ui:Button x:Name="DefaultFrameStyleButton" Content="{x:Static prop:Lang.DeskFrameFrameSettings_DefaultFrameStyle}"  Margin="10,20,0,0" Click="DefaultFrameStyleButton_Click"/>
                     <ui:Button x:Name="ResetDefaultFrameStyleButton" Content="{x:Static prop:Lang.DeskFrameFrameSettings_ResetDefaultStyle}" Icon="{ui:SymbolIcon ArrowReset24}" Margin="10,20,0,0" Click="ResetDefaultFrameStyleButton_Click" />
                 </StackPanel>
-                <ui:ToggleSwitch x:Name="AutoUpdateToggleSwitch" Content="{x:Static prop:Lang.DeskFrameFrameSettings_AutoUpdate}" Margin="10,20,0,0" Click="AutoUpdateToggleSwitch_Click"/>
                 <ui:ToggleSwitch x:Name="DoubleClickToHideSwitch" Content="{x:Static prop:Lang.DeskFrameFrameSettings_DoubleClickHide}" Margin="10,20,0,0" Click="DoubleClickToHideSwitch_Click"/>
 
             </StackPanel>
+
         </StackPanel>
 
         <StackPanel Orientation="Horizontal"  HorizontalAlignment="Right" Margin="0,0,10,5" VerticalAlignment="Bottom">
