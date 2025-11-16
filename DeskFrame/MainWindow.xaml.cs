@@ -51,7 +51,6 @@ namespace DeskFrame
         {
             InitializeComponent();
 
-            versionHeader.Header += " " + Process.GetCurrentProcess().MainModule!.FileVersionInfo.FileVersion!.ToString();
             _controller = new InstanceController();
             _controller.InitInstances();
             if (_controller.reg.KeyExistsRoot("startOnLogin")) startOnLogin = (bool)_controller.reg.ReadKeyValueRoot("startOnLogin");

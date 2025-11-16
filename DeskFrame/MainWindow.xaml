@@ -16,7 +16,7 @@
                    TooltipText="DeskFrame" >
         <tray:NotifyIcon.Menu>
             <ContextMenu MinWidth="65">
-                <MenuItem Name="versionHeader" Header="version" FontSize="10" IsEnabled="False" HorizontalAlignment="Center" Background="{x:Null}" FontFamily="Segoe Print"/>
+                <MenuItem Name="versionHeader" Header="DeskFrame" FontSize="14" FontWeight="Bold" IsEnabled="False" HorizontalAlignment="Center" Background="{x:Null}"/>
 
                 <ui:ToggleSwitch x:Name="AutorunToggle" Content="{x:Static prop:Lang.TrayContextMenu_StartOnLogin}"
                              Checked="AutorunToggle_CheckChanged"  Unchecked="AutorunToggle_CheckChanged"  />
