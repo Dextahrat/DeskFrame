@@ -637,11 +637,6 @@ public class Instance : INotifyPropertyChanged
         _showHiddenFiles = false;
         _isLocked = false;
         
-        // AppSettings'ten varsayılan değerleri yükle
-        var appSettings = DeskFrame.AppSettings.Load();
-        _opacity = (int)(appSettings.DefaultOpacity * 255); // 0-1 arası değeri 0-255'e dönüştür
-        _listViewBackgroundColor = appSettings.DefaultBackgroundColor;
-        
         if (name == "empty" || _settingDefault)
         {
             RegistryHelper helper = new RegistryHelper("DeskFrame");
@@ -688,18 +683,6 @@ public class Instance : INotifyPropertyChanged
             v = helper.ReadKeyValueRoot("TitleTextColor");
             if (v != null) _titleTextColor = v.ToString();
 
-            v = helper.ReadKeyValueRoot("ListViewBackgroundColor");
-            if (v != null) _listViewBackgroundColor = v.ToString();
-
-            v = helper.ReadKeyValueRoot("ListViewFontColor");
-            if (v != null) _listViewFontColor = v.ToString();
-
-            v = helper.ReadKeyValueRoot("ListViewFontShadowColor");
-            if (v != null) _listViewFontShadowColor = v.ToString();
-
-            v = helper.ReadKeyValueRoot("Opacity");
-            if (v != null) _opacity = int.Parse(v.ToString());
-
             v = helper.ReadKeyValueRoot("SortBy");
             if (v != null) _sortBy = int.Parse(v.ToString());
 
@@ -711,6 +694,37 @@ public class Instance : INotifyPropertyChanged
 
             v = helper.ReadKeyValueRoot("IconSize");
             if (v != null) _iconSize = int.Parse(v.ToString());
+            
+            // AppSettings'ten varsayılan değerleri yükle (Registry'de yoksa)
+            var appSettings = DeskFrame.AppSettings.Load();
+            
+            v = helper.ReadKeyValueRoot("Opacity");
+            if (v != null) 
+            {
+                _opacity = int.Parse(v.ToString());
+            }
+            else
+            {
+                // Registry'de Opacity yoksa AppSettings'ten al
+                _opacity = (int)(appSettings.DefaultOpacity * 255);
+            }
+            
+            v = helper.ReadKeyValueRoot("ListViewBackgroundColor");
+            if (v != null) 
+            {
+                _listViewBackgroundColor = v.ToString();
+            }
+            else
+            {
+                // Registry'de ListViewBackgroundColor yoksa AppSettings'ten al
+                _listViewBackgroundColor = appSettings.DefaultBackgroundColor;
+            }
+
+            v = helper.ReadKeyValueRoot("ListViewFontColor");
+            if (v != null) _listViewFontColor = v.ToString();
+
+            v = helper.ReadKeyValueRoot("ListViewFontShadowColor");
+            if (v != null) _listViewFontShadowColor = v.ToString();
         }
     }
     protected void OnPropertyChanged(string propertyName, string value)

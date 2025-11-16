@@ -132,6 +132,9 @@
                                     </ui:SymbolIcon.RenderTransform>
                                 </ui:SymbolIcon>
                             </Grid>
+                            <Grid Cursor="Hand" MouseLeftButtonDown="FrameSettings_MouseLeftButtonDown" Width="30" Background="#02000000" ToolTip="Frame Settings">
+                                <ui:SymbolIcon x:Name="FrameSettingsIcon" Symbol="Settings20" Foreground="{Binding ElementName=title, Path=Foreground}" Width="18" Height="18" FontSize="18"/>
+                            </Grid>
                             <Grid Cursor="Hand" MouseLeftButtonDown="Minimize_MouseLeftButtonDown" Width="30" Background="#02000000">
                                 <ui:SymbolIcon x:Name="ChevronIcon" Symbol="ChevronDown48" Foreground="{Binding ElementName=title, Path=Foreground}" Width="20" Height="20" FontSize="20">
                                     <ui:SymbolIcon.RenderTransform>

@@ -1,55 +1,126 @@
-# Settings System
+# Global Settings System
 
 ## Overview
-DeskFrame now includes a modernized settings system that allows you to customize the appearance of your frames.
+Global settings provide **default values for newly created frames**. These settings do NOT affect existing frames.
 
-## Settings Location
-Settings are stored in: `%AppData%\DeskFrame\app_settings.json`
+## Files
+- `AppSettings.cs` - Settings model and JSON management
+- `SettingsWindow.xaml` / `.xaml.cs` - Global settings UI
+- `appsettings.json` - Stored in `%AppData%/DeskFrame/`
 
-## Available Settings
+## Settings
 
-### 1. Default Opacity
-- **Range**: 0% - 100%
-- **Description**: Controls the transparency level of frames
-- **Default**: 85%
-- **Note**: When changed, applies to ALL existing and new frames immediately
+### Opacity (0-100%)
+- Controls the transparency of the frame background
+- Default: 10% (26/255 in byte value)
+- Applied via Alpha channel in ARGB color
 
-### 2. Background Color
-- **Format**: `#AARRGGBB` (Hexadecimal with Alpha channel)
-- **Description**: Sets the background color for frames
-- **Default**: `#0C000000` (semi-transparent black)
-- **Note**: When changed, applies to ALL existing and new frames immediately
-- **Common Presets**:
-  - Black: `#0C000000`
-  - Dark Gray: `#0C202020`
-  - Blue: `#0C001F3F`
-  - Green: `#0C0F2F1F`
+### Background Color
+- Hex color code (e.g., `#0C000000`)
+- Default: `#0C000000` (very dark with low opacity)
+- Preset colors available in UI
 
-## How to Use
+## How It Works
 
-1. **Open Settings**: Click the "Settings" button in the tray menu
-2. **Adjust Opacity**: Use the slider to set transparency (0-100%)
-3. **Choose Background Color**: 
-   - Enter a hex color code directly
-   - Use the "Pick" button to open a color picker
-   - Click preset color buttons for quick selection
-4. **Preview**: See your changes in real-time in the preview panel
-5. **Save**: Click "Save" to apply settings to **ALL frames** (existing + new)
-6. **Reset**: Click "Reset to Default" to restore default values
+### 1. Global Settings (Tray Menu ? Settings)
+- Opens `SettingsWindow`
+- Displays current global defaults
+- Changes saved to `appsettings.json`
+- **Only affects NEW frames created after saving**
+- **Does NOT modify existing frames**
 
-## Important Notes
+### 2. Frame-Specific Settings (?? button on each frame)
+- Opens `FrameSpecificSettingsWindow`
+- Modifies only that specific frame
+- Saved to Windows Registry per frame
+- Independent of global settings
 
-- ? Settings apply to **ALL FRAMES** immediately upon saving
-- ? Both existing open frames and new frames will use the new settings
-- ? Changes are saved to file and persisted across application restarts
-- ? The preview panel shows exactly how your frames will look
-- ? Settings are automatically loaded when the application starts
+### 3. New Frame Creation
+When a new frame is created:
+1. First loads values from Registry (if they exist)
+2. Falls back to `AppSettings` for missing values
+3. Creates instance with combined settings
+
+## Usage
+
+### Setting Global Defaults
+```
+1. Right-click Tray Icon ? Settings
+2. Adjust Opacity and Background Color
+3. Click "Save"
+4. All NEW frames will use these defaults
+```
+
+### Customizing Individual Frames
+```
+1. Click ?? on any frame's title bar
+2. Adjust settings for that frame
+3. Click "Apply"
+4. Only that frame is affected
+```
 
 ## Technical Details
 
-When you click "Save":
-1. Settings are saved to `app_settings.json`
-2. All currently open frames are updated immediately
-3. The `Instance.Opacity` and `Instance.ListViewBackgroundColor` properties are updated
-4. The UI is refreshed to show the new appearance
-5. New frames created after saving will also use these settings
+### Priority Order (New Frames)
+1. Registry values (if exist from previous sessions)
+2. AppSettings defaults (if no Registry value)
+3. Hard-coded defaults (as fallback)
+
+### Storage Locations
+- **Global**: `%AppData%/DeskFrame/appsettings.json`
+- **Per Frame**: `HKEY_CURRENT_USER\SOFTWARE\DeskFrame\Instances\{FrameName}`
+
+## Code Flow
+
+### Global Settings Save
+```csharp
+SettingsWindow.SaveButton_Click()
+  ?
+AppSettings.Save()  // Writes to JSON
+  ?
+// Does NOT update existing frames
+```
+
+### Frame Creation
+```csharp
+Instance Constructor
+  ?
+Load from Registry (if exists)
+  ?
+Load from AppSettings (if Registry empty)
+  ?
+Apply to new frame
+```
+
+### Frame-Specific Update
+```csharp
+FrameSpecificSettingsWindow.ApplyButton_Click()
+  ?
+Update Instance properties
+  ?
+Call frame.ChangeBackgroundOpacity()
+  ?
+Save to Registry
+```
+
+## Important Notes
+
+?? **Global Settings DO NOT Affect Existing Frames**
+- Changing global settings only affects new frames
+- To update an existing frame, use its ?? button
+
+? **Frame-Specific Settings Are Independent**
+- Each frame can have unique settings
+- Saved separately in Registry
+- Not affected by global setting changes
+
+?? **Best Practice**
+1. Set global defaults first (for new frames)
+2. Create frames (they inherit global defaults)
+3. Customize individual frames as needed (via ??)
+
+## Migration from Old System
+If you have frames created before this update:
+- They retain their existing settings
+- Use ?? button to update opacity/color
+- New frames will use global defaults

@@ -1,43 +1,26 @@
-﻿using System.Diagnostics;
-using Wpf.Ui.Controls;
 using System.Windows;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using Microsoft.Win32;
+using Wpf.Ui.Controls;
 using Color = System.Windows.Media.Color;
 using ColorConverter = System.Windows.Media.ColorConverter;
-using Application = System.Windows.Application;
 
 namespace DeskFrame
 {
-    public partial class SettingsWindow : FluentWindow
+    public partial class FrameSpecificSettingsWindow : FluentWindow
     {
-        private AppSettings _settings;
-        private InstanceController _controller;
-        private MainWindow _window;
+        private DeskFrameWindow _frame;
+        private Instance _instance;
 
-        public SettingsWindow(InstanceController controller, MainWindow window)
+        public FrameSpecificSettingsWindow(DeskFrameWindow frame)
         {
             InitializeComponent();
-            _window = window;
-            _controller = controller;
-            
-            // Ayarları yükle
-            _settings = AppSettings.Load();
-            
-            // UI'ı ayarlarla doldur
-            LoadSettingsToUI();
-        }
+            _frame = frame;
+            _instance = frame.Instance;
 
-        private void LoadSettingsToUI()
-        {
-            // Opacity slider'ı ayarla
-            OpacitySlider.Value = _settings.GetOpacityPercentage();
-            OpacityLabel.Text = $"{_settings.GetOpacityPercentage()}%";
+            // Load current settings
+            OpacitySlider.Value = (_instance.Opacity / 255.0) * 100;
+            BackgroundColorTextBox.Text = _instance.ListViewBackgroundColor;
             
-            // Arkaplan rengini ayarla
-            BackgroundColorTextBox.Text = _settings.DefaultBackgroundColor;
-            UpdateColorPreview(_settings.DefaultBackgroundColor);
             UpdatePreview();
         }
 
@@ -53,8 +36,7 @@ namespace DeskFrame
 
         private void BackgroundColorTextBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
         {
-            string colorText = BackgroundColorTextBox.Text;
-            UpdateColorPreview(colorText);
+            UpdateColorPreview(BackgroundColorTextBox.Text);
             UpdatePreview();
         }
 
@@ -69,7 +51,6 @@ namespace DeskFrame
             }
             catch
             {
-                // Geçersiz renk formatı
                 if (ColorPreview != null)
                 {
                     ColorPreview.Background = new SolidColorBrush(Colors.Red);
@@ -92,13 +73,12 @@ namespace DeskFrame
             }
             catch
             {
-                // Geçersiz renk durumunda preview'ı güncelleme
+                // Invalid color
             }
         }
 
         private void PickColorButton_Click(object sender, RoutedEventArgs e)
         {
-            // Windows Forms ColorDialog kullan
             var colorDialog = new System.Windows.Forms.ColorDialog
             {
                 AllowFullOpen = true,
@@ -109,7 +89,7 @@ namespace DeskFrame
             if (colorDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
             {
                 var color = Color.FromArgb(
-                    12, // Varsayılan alpha
+                    12,
                     colorDialog.Color.R,
                     colorDialog.Color.G,
                     colorDialog.Color.B
@@ -128,26 +108,41 @@ namespace DeskFrame
             }
         }
 
-        private void SaveButton_Click(object sender, RoutedEventArgs e)
+        private void ApplyButton_Click(object sender, RoutedEventArgs e)
         {
             try
             {
-                // Yeni ayarları al
+                // Apply settings to this frame only
                 int newOpacityValue = (int)((OpacitySlider.Value / 100.0) * 255);
                 string newBackgroundColor = BackgroundColorTextBox.Text;
                 
-                // Ayarları güncelle
-                _settings.SetOpacityFromPercentage((int)OpacitySlider.Value);
-                _settings.DefaultBackgroundColor = newBackgroundColor;
+                // Update instance properties FIRST
+                _instance.Opacity = newOpacityValue;
+                _instance.ListViewBackgroundColor = newBackgroundColor;
                 
-                // Kaydet
-                _settings.Save();
+                // Force UI update immediately
+                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                {
+                    try
+                    {
+                        // Parse the new color
+                        var color = (Color)ColorConverter.ConvertFromString(newBackgroundColor);
+                        
+                        // Apply with new opacity
+                        _frame.WindowBackground.Background = new SolidColorBrush(
+                            Color.FromArgb((byte)newOpacityValue, color.R, color.G, color.B)
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Failed to update UI: {ex.Message}");
+                    }
+                });
                 
-                // Kullanıcıya bilgi ver
                 var messageBox = new Wpf.Ui.Controls.MessageBox
                 {
-                    Title = "Settings Saved",
-                    Content = "Default settings have been saved. These will be applied to newly created frames only.",
+                    Title = "Settings Applied",
+                    Content = "Settings have been applied to this frame!",
                     CloseButtonText = "OK"
                 };
                 messageBox.ShowDialogAsync();
@@ -157,7 +152,7 @@ namespace DeskFrame
                 var messageBox = new Wpf.Ui.Controls.MessageBox
                 {
                     Title = "Error",
-                    Content = $"Failed to save settings: {ex.Message}",
+                    Content = $"Failed to apply settings: {ex.Message}",
                     CloseButtonText = "OK"
                 };
                 messageBox.ShowDialogAsync();
@@ -166,15 +161,10 @@ namespace DeskFrame
 
         private void ResetButton_Click(object sender, RoutedEventArgs e)
         {
-            // Varsayılan değerlere dön
-            var defaultSettings = new AppSettings();
-            OpacitySlider.Value = defaultSettings.GetOpacityPercentage();
-            BackgroundColorTextBox.Text = defaultSettings.DefaultBackgroundColor;
-        }
-
-        private void FluentWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
-        {
-            // Pencere kapatılırken yapılacak işlemler
+            // Load from global settings
+            var appSettings = AppSettings.Load();
+            OpacitySlider.Value = appSettings.GetOpacityPercentage();
+            BackgroundColorTextBox.Text = appSettings.DefaultBackgroundColor;
         }
     }
 }

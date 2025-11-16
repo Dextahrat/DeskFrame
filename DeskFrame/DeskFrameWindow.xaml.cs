@@ -1509,6 +1509,13 @@ namespace DeskFrame
             LoadFiles(_currentFolderPath);
             UpdateHiddenFilesIcon();
         }
+        
+        private void FrameSettings_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            var settingsWindow = new FrameSpecificSettingsWindow(this);
+            settingsWindow.Show();
+        }
+        
         private void OpenFolder()
         {
             try
@@ -1546,8 +1553,8 @@ namespace DeskFrame
             var animation = new DoubleAnimation
             {
                 To = value,
-                Duration = animationSpeed == 0 ?
-                    TimeSpan.FromSeconds(0.1) :
+                Duration = animationSpeed == 0 ? 
+                    TimeSpan.FromSeconds(0.1) : 
                     TimeSpan.FromSeconds(0.2 / animationSpeed),
             };
             this.BeginAnimation(OpacityProperty, animation);
@@ -1960,13 +1967,53 @@ namespace DeskFrame
             {
                 try
                 {
-                    Process.Start(new ProcessStartInfo(clickedItem.FullPath!) { UseShellExecute = true });
+                    if (Instance.FolderOpenInsideFrame && clickedItem.IsFolder)
+                    {
+                        _currentFolderPath = clickedItem.FullPath;
+                        PathToBackButton.Visibility = _currentFolderPath == Instance.Folder
+                            ? Visibility.Collapsed : Visibility.Visible;
+                        InitializeFileWatcher();
+                        FileItems.Clear();
+                        LoadFiles(clickedItem.FullPath);
+                    }
+                    else
+                    {
+                        Process.Start(new ProcessStartInfo(clickedItem.FullPath!) { UseShellExecute = true });
+                    }
+                    if (Instance.LastAccesedToFirstRow)
+                    {
+                        var fileId = GetFileId(clickedItem.FullPath!).ToString();
+                        var newList = new List<string>(Instance.LastAccessedFiles);
+                        newList.Remove(fileId);
+                        newList.Insert(0, fileId);
+                        Instance.LastAccessedFiles = newList;
+                        var wrapPanel = FindParentOrChild<WrapPanel>(FileWrapPanel);
+                        if (wrapPanel != null)
+                        {
+                            double itemWidth = wrapPanel.ItemWidth;
+                            ItemPerRow = (int)((this.Width) / itemWidth);
+                        }
+                        FirstRowByLastAccessed(FileItems, Instance.LastAccessedFiles, ItemPerRow);
+                    }
                 }
-                catch
+                catch //(Exception ex)
                 {
+                    //  MessageBox.Show($"Error opening file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
+            else if (e.LeftButton == MouseButtonState.Pressed && sender is Border dragBorder)
+            {
+                if (dragBorder.DataContext is FileItem fileItem)
+                {
+
+                    DataObject data = new DataObject(DataFormats.FileDrop, new string[] { fileItem.FullPath! });
+                    DragDrop.DoDragDrop(dragBorder, data, DragDropEffects.Copy | DragDropEffects.Move);
+                }
+            }
+
         }
+
+
         private void FileListView_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
         {
             _canAutoClose = false;
@@ -2159,7 +2206,7 @@ namespace DeskFrame
                     }
                     if (Instance.LastAccesedToFirstRow)
                     {
-                        var fileId = GetFileId(clickedFileItem.FullPath!).ToString();
+                        var fileId = GetFileId(clickedItem.FullPath!).ToString();
                         var newList = new List<string>(Instance.LastAccessedFiles);
                         newList.Remove(fileId);
                         newList.Insert(0, fileId);
@@ -2759,7 +2806,7 @@ namespace DeskFrame
             try
             {
                 var c = (Color)System.Windows.Media.ColorConverter.ConvertFromString(Instance.ListViewBackgroundColor);
-                WindowBackground.Background = new SolidColorBrush(Color.FromArgb((byte)Instance.Opacity, c.R, c.G, c.B));
+                WindowBackground.Background = new SolidColorBrush(Color.FromArgb((byte)num, c.R, c.G, c.B));
             }
             catch
             {
@@ -3013,7 +3060,7 @@ namespace DeskFrame
                 //    {
                 //        GlassFrameThickness = new Thickness(5),
                 //        CaptionHeight = 0,
-                //        ResizeBorderThickness = new Thickness(5, Instance.Minimized ? 0 : 5, 5, 0),
+                //        ResizeBorderThickness = new Thickness(0, Instance.Minimized ? 0 : 5, 5, 0),
                 //        CornerRadius = new CornerRadius(5)
                 //    } :
                 //    new WindowChrome
@@ -3136,67 +3183,51 @@ namespace DeskFrame
             {
                 StaysOpenOnClick = true,
                 IsEnabled = false,
+                Header = new StackPanel
+                {
+                    Orientation = System.Windows.Controls.Orientation.Vertical,
+                    Background = Brushes.Transparent,
+                    Children =
+                    {
+                        new TextBlock
+                        {
+                            Text = Lang.TitleBarContextMenu_Info_Files,
+                            Foreground = Brushes.White,
+                            TextWrapping = TextWrapping.Wrap
+                        },
+                        new TextBlock
+                        {
+                            Text = _fileCount,
+                            Foreground = Brushes.CornflowerBlue,
+                            TextWrapping = TextWrapping.Wrap
+                        },
+                        new TextBlock
+                        {
+                            Text = Lang.TitleBarContextMenu_Info_Folders,
+                            Foreground = Brushes.White,
+                            TextWrapping = TextWrapping.Wrap
+                        },
+                        new TextBlock
+                        {
+                            Text = _folderCount.ToString(),
+                            Foreground = Brushes.CornflowerBlue,
+                            TextWrapping = TextWrapping.Wrap
+                        },
+                        new TextBlock
+                        {
+                            Text = Lang.TitleBarContextMenu_Info_LastUpdated,
+                            Foreground = Brushes.White,
+                            TextWrapping = TextWrapping.Wrap
+                        },
+                        new TextBlock
+                        {
+                            Text = _lastUpdated.ToString("hh:mm tt"),
+                            Foreground = Brushes.CornflowerBlue,
+                            TextWrapping = TextWrapping.Wrap
+                        }
+                    }
+                }
             };
-            TextBlock InfoText = new TextBlock
-            {
-                HorizontalAlignment = System.Windows.HorizontalAlignment.Left,
-                VerticalAlignment = VerticalAlignment.Top,
-                FontSize = 12,
-                TextWrapping = TextWrapping.Wrap,
-            };
-
-            InfoText.Inlines.Add(new Run(Lang.TitleBarContextMenu_Info_Files) { Foreground = Brushes.White });
-            InfoText.Inlines.Add(new Run($"{_fileCount}") { Foreground = Brushes.CornflowerBlue });
-            InfoText.Inlines.Add(new Run("\n"));
-
-            InfoText.Inlines.Add(new Run(Lang.TitleBarContextMenu_Info_Folders) { Foreground = Brushes.White });
-            InfoText.Inlines.Add(new Run($"{_folderCount}") { Foreground = Brushes.CornflowerBlue });
-            InfoText.Inlines.Add(new Run("\n"));
-            if (Instance.CheckFolderSize)
-            {
-                InfoText.Inlines.Add(new Run(Lang.TitleBarContextMenu_Info_FolderSize) { Foreground = Brushes.White });
-                InfoText.Inlines.Add(new Run($"{_folderSize}") { Foreground = Brushes.CornflowerBlue });
-                InfoText.Inlines.Add(new Run("\n"));
-            }
-
-            InfoText.Inlines.Add(new Run(Lang.TitleBarContextMenu_Info_LastUpdated) { Foreground = Brushes.White });
-            InfoText.Inlines.Add(new Run($"{_lastUpdated.ToString("hh:mm tt")}") { Foreground = Brushes.CornflowerBlue });
-
-            FrameInfoItem.Header = InfoText;
-
-
-            folderOrderMenuItem = new MenuItem
-            {
-                Header = Lang.TitleBarContextMenu_Sortby_FolderOrder,
-                Height = 36,
-                StaysOpenOnClick = true,
-                Icon = new SymbolIcon { Symbol = SymbolRegular.Folder20 }
-            };
-
-            folderNoneMenuItem = new MenuItem { Header = Lang.TitleBarContextMenu_Sortby_FolderIder_None, Height = 34, StaysOpenOnClick = true };
-            folderFirstMenuItem = new MenuItem { Header = Lang.TitleBarContextMenu_Sortby_FolderIder_First, Height = 34, StaysOpenOnClick = true };
-            folderLastMenuItem = new MenuItem { Header = Lang.TitleBarContextMenu_Sortby_FolderIder_Last, Height = 34, StaysOpenOnClick = true };
-
-            folderNoneMenuItem.Click += (s, args) =>
-            {
-                Instance.FolderOrder = 0;
-                UpdateIcons();
-                SortItems();
-            };
-            folderFirstMenuItem.Click += (s, args) =>
-            {
-                Instance.FolderOrder = 1;
-                UpdateIcons();
-                SortItems();
-            };
-            folderLastMenuItem.Click += (s, args) =>
-            {
-                Instance.FolderOrder = 2;
-                UpdateIcons();
-                SortItems();
-            };
-
-            UpdateIcons();
 
             MenuItem openInExplorerMenuItem = new MenuItem
             {
@@ -3240,22 +3271,6 @@ namespace DeskFrame
                     changeItemView.Icon = new SymbolIcon { Symbol = SymbolRegular.AppsList20 };
                 }
             };
-
-            folderOrderMenuItem.Items.Add(folderNoneMenuItem);
-            folderOrderMenuItem.Items.Add(folderFirstMenuItem);
-            folderOrderMenuItem.Items.Add(folderLastMenuItem);
-
-
-            sortByMenuItem.Items.Add(folderOrderMenuItem);
-            sortByMenuItem.Items.Add(new Separator());
-            sortByMenuItem.Items.Add(nameMenuItem);
-            sortByMenuItem.Items.Add(dateModifiedMenuItem);
-            sortByMenuItem.Items.Add(dateCreatedMenuItem);
-            sortByMenuItem.Items.Add(fileTypeMenuItem);
-            sortByMenuItem.Items.Add(fileSizeMenuItem);
-            sortByMenuItem.Items.Add(new Separator());
-            sortByMenuItem.Items.Add(ascendingMenuItem);
-            sortByMenuItem.Items.Add(descendingMenuItem);
 
             contextMenu.Items.Add(sortByMenuItem);
             contextMenu.Items.Add(new Separator());
