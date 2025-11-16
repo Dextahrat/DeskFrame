@@ -161,17 +161,6 @@ namespace DeskFrame
             }
             _controller.reg.WriteToRegistryRoot("startOnLogin", AutorunToggle.IsChecked);
         }
-        private void visitGithub_Buton_Click(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                ProcessStartInfo sInfo = new ProcessStartInfo($"https://github.com/PinchToDebug/DeskFrame") { UseShellExecute = true };
-                _ = Process.Start(sInfo);
-            }
-            catch
-            {
-            }
-        }
 
         private void ExitApp(object sender, RoutedEventArgs e)
         {
