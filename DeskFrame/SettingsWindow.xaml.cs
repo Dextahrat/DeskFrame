@@ -1,127 +1,202 @@
 ﻿using System.Diagnostics;
 using Wpf.Ui.Controls;
 using System.Windows;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Microsoft.Win32;
+using Color = System.Windows.Media.Color;
+using ColorConverter = System.Windows.Media.ColorConverter;
+using Application = System.Windows.Application;
+
 namespace DeskFrame
 {
     public partial class SettingsWindow : FluentWindow
     {
-        InstanceController _controller;
-        DeskFrameWindow _dWindows;
-        Instance _instance;
-        MainWindow _window;
+        private AppSettings _settings;
+        private InstanceController _controller;
+        private MainWindow _window;
+
         public SettingsWindow(InstanceController controller, MainWindow window)
         {
             InitializeComponent();
-            this.LocationChanged += Window_LocationChanged;
-            this.MinHeight = 0;
-            this.MinWidth = 200;
             _window = window;
             _controller = controller;
-            // if (_controller.reg.KeyExistsRoot("blurBackground")) blurToggle.IsChecked = (bool)_controller.reg.ReadKeyValueRoot("blurBackground");
-            if (_controller.reg.KeyExistsRoot("DoubleClickToHide")) DoubleClickToHideSwitch.IsChecked = (bool)_controller.reg.ReadKeyValueRoot("DoubleClickToHide");
+            
+            // Ayarları yükle
+            _settings = AppSettings.Load();
+            
+            // UI'ı ayarlarla doldur
+            LoadSettingsToUI();
         }
 
-        private void blurToggle_CheckChanged(object sender, System.Windows.RoutedEventArgs e)
+        private void LoadSettingsToUI()
         {
-            //   _controller.reg.WriteToRegistryRoot("blurBackground", blurToggle.IsChecked!);
-            //   _controller.ChangeBlur((bool)blurToggle.IsChecked!);
+            // Opacity slider'ı ayarla
+            OpacitySlider.Value = _settings.GetOpacityPercentage();
+            OpacityLabel.Text = $"{_settings.GetOpacityPercentage()}%";
+            
+            // Arkaplan rengini ayarla
+            BackgroundColorTextBox.Text = _settings.DefaultBackgroundColor;
+            UpdateColorPreview(_settings.DefaultBackgroundColor);
+            UpdatePreview();
         }
 
-        private void ExportSettingsButton_Click(object sender, RoutedEventArgs e)
+        private void OpacitySlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            ExportRegistryKey(_controller.reg.regKeyName);
+            if (OpacityLabel == null) return;
+            
+            int value = (int)OpacitySlider.Value;
+            OpacityLabel.Text = $"{value}%";
+            
+            UpdatePreview();
         }
 
-        void ExportRegistryKey(string regKeyName)
+        private void BackgroundColorTextBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
         {
-            var saveDialog = new Microsoft.Win32.SaveFileDialog
+            string colorText = BackgroundColorTextBox.Text;
+            UpdateColorPreview(colorText);
+            UpdatePreview();
+        }
+
+        private void UpdateColorPreview(string colorHex)
+        {
+            try
             {
-                Filter = "Registry Files (*.reg)|*.reg",
-                Title = "Export Registry Key",
-                FileName = $"DeskFrame_settings_{DateTime.Now.ToString("yyyy-MM-dd_hhmm")}"
-            };
-            if (saveDialog.ShowDialog() == true)
-            {
-                string fullKeyPath = $@"HKCU\SOFTWARE\{regKeyName}";
-                string arguments = $"export \"{fullKeyPath}\" \"{saveDialog.FileName}\" /y";
-
-                var process = new Process
-                {
-                    StartInfo = new ProcessStartInfo
-                    {
-                        FileName = "reg.exe",
-                        Arguments = arguments,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        UseShellExecute = false,
-                        CreateNoWindow = true
-                    }
-                }.Start();
+                if (ColorPreview == null) return;
+                
+                var color = (Color)ColorConverter.ConvertFromString(colorHex);
+                ColorPreview.Background = new SolidColorBrush(color);
             }
-        }
-
-        private void DefaultFrameStyleButton_Click(object sender, RoutedEventArgs e)
-        {
-
-            if (_dWindows != null) _dWindows.Close();
-
-            _instance = new Instance("Default Style", true);
-            _instance.SettingDefault = true;
-            _instance.Folder = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-
-            _dWindows = new DeskFrameWindow(_instance);
-            _dWindows.addFolder.Visibility = Visibility.Hidden;
-            _dWindows.showFolder.Visibility = Visibility.Visible;
-            _dWindows.title.Visibility = Visibility.Visible;
-            _dWindows.WindowBorder.Visibility = Visibility.Visible;
-            _dWindows.Left = this.Width + this.Left + 10;
-            _dWindows.Top = this.Top;
-            _dWindows.Show();
-
-        }
-        private void Window_LocationChanged(object sender, EventArgs e)
-        {
-            if (_dWindows != null)
+            catch
             {
-                _dWindows.Left = this.Width + this.Left + 10;
-                _dWindows.Top = this.Top;
-            }
-        }
-        private void ResetDefaultFrameStyleButton_Click(object sender, RoutedEventArgs e)
-        {
-            string[] keep = { "blurBackground", "startOnLogin" };
-            RegistryKey key = Registry.CurrentUser.OpenSubKey("Software\\DeskFrame", writable: true)!;
-            foreach (var name in key.GetValueNames())
-            {
-                if (Array.IndexOf(keep, name) == -1)
+                // Geçersiz renk formatı
+                if (ColorPreview != null)
                 {
-                    try
-                    {
-                        key.DeleteValue(name);
-                    }
-                    catch
-                    {
-                    }
+                    ColorPreview.Background = new SolidColorBrush(Colors.Red);
                 }
             }
-            key.Close();
+        }
+
+        private void UpdatePreview()
+        {
+            if (PreviewBorder == null) return;
+            
+            try
+            {
+                string colorHex = BackgroundColorTextBox.Text;
+                var color = (Color)ColorConverter.ConvertFromString(colorHex);
+                PreviewBorder.Background = new SolidColorBrush(color);
+                
+                double opacity = OpacitySlider.Value / 100.0;
+                PreviewBorder.Opacity = opacity;
+            }
+            catch
+            {
+                // Geçersiz renk durumunda preview'ı güncelleme
+            }
+        }
+
+        private void PickColorButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Windows Forms ColorDialog kullan
+            var colorDialog = new System.Windows.Forms.ColorDialog
+            {
+                AllowFullOpen = true,
+                FullOpen = true,
+                AnyColor = true
+            };
+
+            if (colorDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                var color = Color.FromArgb(
+                    12, // Varsayılan alpha
+                    colorDialog.Color.R,
+                    colorDialog.Color.G,
+                    colorDialog.Color.B
+                );
+                
+                string hexColor = $"#{color.A:X2}{color.R:X2}{color.G:X2}{color.B:X2}";
+                BackgroundColorTextBox.Text = hexColor;
+            }
+        }
+
+        private void PresetColor_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is System.Windows.Controls.Button button && button.Tag is string colorHex)
+            {
+                BackgroundColorTextBox.Text = colorHex;
+            }
+        }
+
+        private void SaveButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                // Yeni ayarları al
+                int newOpacityValue = (int)((OpacitySlider.Value / 100.0) * 255);
+                string newBackgroundColor = BackgroundColorTextBox.Text;
+                
+                // Ayarları güncelle
+                _settings.SetOpacityFromPercentage((int)OpacitySlider.Value);
+                _settings.DefaultBackgroundColor = newBackgroundColor;
+                
+                // Kaydet
+                _settings.Save();
+                
+                // TÜM AÇIK FRAME'LERİ GÜNCELLE
+                UpdateAllFrames(newOpacityValue, newBackgroundColor);
+                
+                // Kullanıcıya bilgi ver (pencere açık kalacak)
+                var messageBox = new Wpf.Ui.Controls.MessageBox
+                {
+                    Title = "Settings Saved",
+                    Content = "Settings have been saved and applied to all frames successfully!",
+                    CloseButtonText = "OK"
+                };
+                messageBox.ShowDialogAsync();
+            }
+            catch (Exception ex)
+            {
+                var messageBox = new Wpf.Ui.Controls.MessageBox
+                {
+                    Title = "Error",
+                    Content = $"Failed to save settings: {ex.Message}",
+                    CloseButtonText = "OK"
+                };
+                messageBox.ShowDialogAsync();
+            }
+        }
+
+        /// <summary>
+        /// Tüm açık frame'lerin görünümünü günceller
+        /// </summary>
+        private void UpdateAllFrames(int opacityValue, string backgroundColor)
+        {
+            foreach (var subWindow in _controller._subWindows)
+            {
+                // Instance ayarlarını güncelle
+                subWindow.Instance.Opacity = opacityValue;
+                subWindow.Instance.ListViewBackgroundColor = backgroundColor;
+                
+                // UI'ı hemen güncelle
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    subWindow.ChangeBackgroundOpacity(opacityValue);
+                });
+            }
+        }
+
+        private void ResetButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Varsayılan değerlere dön
+            var defaultSettings = new AppSettings();
+            OpacitySlider.Value = defaultSettings.GetOpacityPercentage();
+            BackgroundColorTextBox.Text = defaultSettings.DefaultBackgroundColor;
         }
 
         private void FluentWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            if (_dWindows != null)
-            {
-                _dWindows.Close();
-            }
+            // Pencere kapatılırken yapılacak işlemler
         }
-        private void DoubleClickToHideSwitch_Click(object sender, RoutedEventArgs e)
-        {
-            _controller.reg.WriteToRegistryRoot("DoubleClickToHide", DoubleClickToHideSwitch.IsChecked!);
-            _window.DoubleClickToHide = (bool)DoubleClickToHideSwitch.IsChecked!;
-        }
-
-
     }
 }

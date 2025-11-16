@@ -636,6 +636,12 @@ public class Instance : INotifyPropertyChanged
         _folder = "empty";
         _showHiddenFiles = false;
         _isLocked = false;
+        
+        // AppSettings'ten varsayılan değerleri yükle
+        var appSettings = DeskFrame.AppSettings.Load();
+        _opacity = (int)(appSettings.DefaultOpacity * 255); // 0-1 arası değeri 0-255'e dönüştür
+        _listViewBackgroundColor = appSettings.DefaultBackgroundColor;
+        
         if (name == "empty" || _settingDefault)
         {
             RegistryHelper helper = new RegistryHelper("DeskFrame");
